@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Food Delivery Time Predictor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0f1117;
+      --surface: #181c27;
+      --border:  #252a38;
+      --accent:  #4f8ef7;
+      --accent2: #7c5cfc;
+      --text:    #e8eaf0;
+      --muted:   #6b7080;
+      --success: #34d399;
+      --error:   #f87171;
+      --radius:  12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container { width: 100%; max-width: 560px; }
+
+    /* Header */
+    .header { margin-bottom: 32px; text-align: center; }
+    .header .icon { font-size: 2.4rem; margin-bottom: 12px; display: block; }
+    .header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+    .header p { margin-top: 6px; font-size: 0.85rem; color: var(--muted); }
+    .badge {
+      display: inline-block; margin-top: 10px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+      color: var(--accent); background: rgba(79,142,247,0.1);
+      border: 1px solid rgba(79,142,247,0.25);
+      padding: 3px 10px; border-radius: 100px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+    }
+
+    /* Fields */
+    .field { margin-bottom: 20px; }
+    .field > label {
+      display: block; font-size: 0.8rem; font-weight: 500;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 8px;
+    }
+
+    /* Number stepper */
+    .input-wrap {
+      display: flex; align-items: center;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; transition: border-color 0.15s;
+    }
+    .input-wrap:focus-within { border-color: var(--accent); }
+    .input-wrap button {
+      background: none; border: none; color: var(--muted);
+      font-size: 1.2rem; padding: 0 14px; height: 44px;
+      cursor: pointer; transition: color 0.15s, background 0.15s; flex-shrink: 0;
+    }
+    .input-wrap button:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .input-wrap input[type="number"] {
+      flex: 1; background: none; border: none; outline: none;
+      text-align: center; font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem; font-weight: 600; color: var(--text);
+      height: 44px; -moz-appearance: textfield;
+    }
+    .input-wrap input::-webkit-outer-spin-button,
+    .input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    /* Segment */
+    .segment { display: flex; gap: 6px; flex-wrap: wrap; }
+    .segment input[type="radio"] { display: none; }
+    .segment label {
+      cursor: pointer; font-size: 0.82rem; font-weight: 500;
+      color: var(--muted); background: var(--bg);
+      border: 1px solid var(--border); border-radius: 7px;
+      padding: 7px 14px; transition: all 0.15s; white-space: nowrap;
+    }
+    .segment label:hover { color: var(--text); border-color: #3a4055; }
+    .segment input[type="radio"]:checked + label {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-color: transparent; font-weight: 600;
+    }
+
+    .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+    /* Button */
+    .btn-predict {
+      width: 100%; height: 50px; border: none; border-radius: 9px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-family: 'Inter', sans-serif;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-predict:hover { opacity: 0.9; }
+    .btn-predict:active { transform: scale(0.99); }
+    .btn-predict:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Spinner inside button */
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.7s linear infinite; vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Result */
+    .result {
+      display: none; margin-top: 20px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 22px 24px; text-align: center;
+      animation: fadeIn 0.3s ease;
+    }
+    .result.show { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+    .result .label {
+      font-size: 0.75rem; font-weight: 500; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px;
+    }
+    .result .time {
+      font-family: 'JetBrains Mono', monospace; font-size: 3rem; font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; line-height: 1;
+    }
+    .result .unit { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+    .result .range { margin-top: 12px; font-size: 0.78rem; color: var(--muted); }
+    .result .range span { color: var(--success); font-family: 'JetBrains Mono', monospace; }
+
+    /* Error */
+    .error-box {
+      display: none; margin-top: 16px; padding: 12px 16px;
+      background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 8px; font-size: 0.82rem; color: var(--error); text-align: center;
+    }
+    .error-box.show { display: block; }
+
+    /* Footer chips */
+    .model-info {
+      margin-top: 20px; display: flex; gap: 10px;
+      flex-wrap: wrap; justify-content: center;
+    }
+    .chip {
+      font-size: 0.72rem; color: var(--muted); background: var(--surface);
+      border: 1px solid var(--border); border-radius: 100px;
+      padding: 3px 10px; font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <span class="icon">🛵</span>
+    <h1>Delivery Time Predictor</h1>
+    <p>Food Delivery Times — ML Endterm Project</p>
+    <span class="badge">Linear Regression · R²=0.8274 · RMSE=8.795</span>
+  </div>
+
+  <div class="card">
+
+    <div class="field">
+      <label>Distance (km)</label>
+      <div class="input-wrap">
+        <button onclick="step('distance', -0.5)">−</button>
+        <input type="number" id="distance" value="5.0" min="0.5" max="50" step="0.5" />
+        <button onclick="step('distance', 0.5)">+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Preparation Time (min)</label>
+      <div class="input-wrap">
+        <button onclick="step('prep', -1)">−</button>
+        <input type="number" id="prep" value="15" min="1" max="90" step="1" />
+        <button onclick="step('prep', 1)">+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Courier Experience (years)</label>
+      <div class="input-wrap">
+        <button onclick="step('exp', -1)">−</button>
+        <input type="number" id="exp" value="2" min="0" max="20" step="1" />
+        <button onclick="step('exp', 1)">+</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label>Weather Conditions</label>
+      <div class="segment">
+        <input type="radio" name="weather" id="w_clear"  value="Clear"  checked />
+        <label for="w_clear">☀️ Clear</label>
+        <input type="radio" name="weather" id="w_foggy"  value="Foggy" />
+        <label for="w_foggy">🌫️ Foggy</label>
+        <input type="radio" name="weather" id="w_rainy"  value="Rainy" />
+        <label for="w_rainy">🌧️ Rainy</label>
+        <input type="radio" name="weather" id="w_snowy"  value="Snowy" />
+        <label for="w_snowy">❄️ Snowy</label>
+        <input type="radio" name="weather" id="w_windy"  value="Windy" />
+        <label for="w_windy">💨 Windy</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Traffic Level</label>
+      <div class="segment">
+        <input type="radio" name="traffic" id="t_low"  value="Low" />
+        <label for="t_low">🟢 Low</label>
+        <input type="radio" name="traffic" id="t_med"  value="Medium" checked />
+        <label for="t_med">🟡 Medium</label>
+        <input type="radio" name="traffic" id="t_high" value="High" />
+        <label for="t_high">🔴 High</label>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="btn-predict" id="btn" onclick="predict()">
+      Predict Delivery Time
+    </button>
+
+    <div class="result" id="result">
+      <div class="label">Estimated Delivery Time</div>
+      <div class="time" id="result-time">—</div>
+      <div class="unit">minutes</div>
+      <div class="range" id="result-range"></div>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+
+  </div>
+
+  <div class="model-info">
+    <span class="chip">sklearn LinearRegression</span>
+    <span class="chip">StandardScaler</span>
+    <span class="chip">n=1000 samples</span>
+    <span class="chip">Flask backend</span>
+  </div>
+
+</div>
+
+<script>
+  function step(id, delta) {
+    const el  = document.getElementById(id);
+    const val = parseFloat(el.value) + delta;
+    el.value  = Math.min(parseFloat(el.max), Math.max(parseFloat(el.min), parseFloat(val.toFixed(2))));
+  }
+
+  function getRadio(name) {
+    return document.querySelector(`input[name="${name}"]:checked`).value;
+  }
+
+  async function predict() {
+    const btn = document.getElementById('btn');
+    const errorBox = document.getElementById('error-box');
+    errorBox.classList.remove('show');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Predicting…';
+
+    const payload = {
+      distance: parseFloat(document.getElementById('distance').value),
+      prep:     parseFloat(document.getElementById('prep').value),
+      exp:      parseFloat(document.getElementById('exp').value),
+      weather:  getRadio('weather'),
+      traffic:  getRadio('traffic'),
+    };
+
+    try {
+      const res  = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Server error');
+
+      const pred = data.prediction;
+      const mae  = data.mae;
+      const lo   = Math.max(1, pred - mae).toFixed(1);
+      const hi   = (pred + mae).toFixed(1);
+
+      document.getElementById('result-time').textContent = pred.toFixed(1);
+      document.getElementById('result-range').innerHTML =
+        `±MAE range: <span>${lo} – ${hi} min</span>`;
+
+      const result = document.getElementById('result');
+      result.classList.remove('show');
+      void result.offsetWidth;
+      result.classList.add('show');
+
+    } catch (err) {
+      errorBox.textContent = '⚠️ ' + (err.message || 'Could not connect to server. Is Flask running?');
+      errorBox.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Predict Delivery Time';
+    }
+  }
+</script>
+</body>
+</html>
